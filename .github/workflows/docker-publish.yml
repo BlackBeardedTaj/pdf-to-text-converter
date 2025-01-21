@@ -1,36 +1,37 @@
 name: Docker Build and Push
 
 on:
-# Instead of:
-    # push:
-        # branches:
-            # - main
-# I made the "Docker Build and Push" depend on a successful completion of app tests from the "Python CI/CD" workflow
-    workflow_run:
-        workflows:
-            - Python CI/CD
-        types:
-            - completed
+  push:
+    tags:
+      - 'v*' # Trigger only on tags starting with 'v'
 
 jobs:
-    buid-and-push:
-    # This "if-part" runs building and pushing a docker container only after the test(s) was(were) successful 
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
-        runs-on: ubuntu-latest
+  build-and-push:
+    runs-on: ubuntu-latest
 
-        steps:
-            # Step 1: Checkout Code
-            - name: Checkout code
-              uses: actions/checkout@v3
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-            # Step 2: Log in to DockerHub
-            - name: Log in to DockerHub
-              run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      # Step 2: Extract Version from Git Tag
+      - name: Get version from Git tag
+        id: version
+        run: |
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-            # Step 3: Build Docker Image
-            - name: Build Docker image
-              run: docker build -t blackbeardedtaj/pdf-to-text:latest .
+      # Step 3: Log in to DockerHub
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            # Step 4: Push Docker Image to DockerHub
-            - name: Push Docker image to DockerHub
-              run: docker push blackbeardedtaj/pdf-to-text:latest
+      # Step 4: Build Docker Image
+      - name: Build Docker image
+        run: |
+          docker build -t blackbeardedtaj/pdf-to-text:${{ env.version }} .
+          docker tag blackbeardedtaj/pdf-to-text:${{ env.version }} blackbeardedtaj/pdf-to-text:latest
+
+      # Step 5: Push Docker Image to DockerHub
+      - name: Push Docker image to DockerHub
+        run: |
+          docker push blackbeardedtaj/pdf-to-text:${{ env.version }}
+          docker push blackbeardedtaj/pdf-to-text:latest

@@ -3,10 +3,12 @@ name: Python CI/CD
 on:
   push:
     branches:
-      - main
+      - main  # Trigger tests on pushes to main
+    tags:
+      - 'v*'  # Trigger tests on tag pushes starting with 'v'
   pull_request:
     branches:
-      - main
+      - main  # Trigger tests on pull requests to main
 
 jobs:
   test:
